@@ -10,8 +10,7 @@ import platform
 import subprocess
 import sys
 from datetime import datetime
-from typing import Dict, List, Optional, Union
-import random
+from typing import Dict, List, Optional
 
 import psutil
 from rich.console import Console
@@ -29,7 +28,6 @@ from rich.text import Text
 from rich.live import Live
 from rich.align import Align
 from rich import box
-from rich.columns import Columns
 
 try:
     import pynvml
@@ -46,8 +44,6 @@ class SystemMonitor:
         self.network_stats_prev = psutil.net_io_counters()
         self.network_update_time = time.time()
 
-        self.matrix_chars = "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン"
-
         # Initialize NVIDIA if available
         if NVIDIA_AVAILABLE:
             try:
@@ -58,49 +54,17 @@ class SystemMonitor:
         else:
             self.gpu_count = 0
 
-    def _generate_matrix_column(self, width: int, height: int) -> Text:
-        """Generates a column of matrix-style text."""
-        text = Text()
-        for _ in range(height):
-            for _ in range(width):
-                char = random.choice(self.matrix_chars)
-                if random.random() < 0.2:
-                    text.append(" ")
-                else:
-                    style = random.choice(["green", "bright_green", "color(22)"])
-                    text.append(char, style=style)
-            text.append("\n")
-        return text
-
-    def get_ascii_header(self) -> Union[Columns, Align]:
-        """Generate cool ASCII header with matrix effect"""
-        header_art = """
+    def get_ascii_header(self) -> Text:
+        """Generate cool ASCII header"""
+        header = """
 ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
 ██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
 ███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
 ╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
 ███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
 ╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
-        """.strip()
-
-        header_text = Text(header_art, style="bold bright_green")
-        header_art_lines = header_art.split("\n")
-        header_art_width = (
-            max(len(line) for line in header_art_lines) if header_art_lines else 0
-        )
-        num_lines = len(header_art_lines)
-
-        matrix_width = (self.console.width - header_art_width) // 2 - 2
-
-        if matrix_width > 4:
-            left_matrix = self._generate_matrix_column(matrix_width, num_lines)
-            right_matrix = self._generate_matrix_column(matrix_width, num_lines)
-            return Columns(
-                [left_matrix, Align.center(header_text), right_matrix],
-                expand=True,
-            )
-
-        return Align.center(header_text)
+        """
+        return Text(header, style="bold bright_green")
 
     def get_system_info(self) -> Panel:
         """Get basic system information"""
@@ -415,35 +379,25 @@ class SystemMonitor:
             Layout(name="footer", size=3),
         )
 
-        if self.console.width < 130:
-            # Narrow layout
-            layout["main"].split_column(
-                Layout(name="system_info"),
-                Layout(name="cpu_mem"),
-                Layout(name="network"),
-                Layout(name="gpu"),
-                Layout(name="processes"),
-                Layout(name="disk"),
-            )
-        else:
-            # Wide layout
-            layout["main"].split_row(Layout(name="left"), Layout(name="right"))
-            layout["left"].split_column(
-                Layout(name="system_info", ratio=1),
-                Layout(name="cpu_mem", ratio=1),
-                Layout(name="gpu", ratio=1),
-            )
-            layout["right"].split_column(
-                Layout(name="network", ratio=1),
-                Layout(name="processes", ratio=2),
-                Layout(name="disk", ratio=1),
-            )
+        layout["main"].split_row(Layout(name="left"), Layout(name="right"))
+
+        layout["left"].split_column(
+            Layout(name="system_info", ratio=1),
+            Layout(name="cpu_mem", ratio=1),
+            Layout(name="gpu", ratio=1),
+        )
+
+        layout["right"].split_column(
+            Layout(name="network", ratio=1),
+            Layout(name="processes", ratio=2),
+            Layout(name="disk", ratio=1),
+        )
 
         return layout
 
     def update_layout(self, layout: Layout):
         """Update all panels in the layout"""
-        layout["header"].update(self.get_ascii_header())
+        layout["header"].update(Align.center(self.get_ascii_header()))
         layout["system_info"].update(self.get_system_info())
         layout["cpu_mem"].update(self.get_cpu_memory_info())
         layout["gpu"].update(self.get_gpu_info())
@@ -459,18 +413,12 @@ class SystemMonitor:
     async def run(self):
         """Main run loop"""
         layout = self.create_layout()
-        last_width = self.console.width
 
-        with Live(layout, refresh_per_second=10, screen=True) as live:
+        with Live(layout, refresh_per_second=2, screen=True) as live:
             while True:
                 try:
-                    if self.console.width != last_width:
-                        layout = self.create_layout()
-                        live.update(layout, refresh=True)
-                        last_width = self.console.width
-
                     self.update_layout(layout)
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(1)
                 except KeyboardInterrupt:
                     break
                 except Exception as e:
