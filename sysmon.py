@@ -45,6 +45,7 @@ class Matrix:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
+        self._initial_width = width
         self._columns = [self._new_column(i) for i in range(self.width) if i % 2 == 0]
         self._title_text = self._get_title_text()
         self._title_lines = self._title_text.strip().split("\n")
@@ -77,6 +78,12 @@ class Matrix:
     def __rich_console__(
         self, console: Console, options: ConsoleOptions
     ) -> RenderResult:
+        num_expected_cols = self.width // 2
+        if len(self._columns) < num_expected_cols:
+            current_cols = len(self._columns)
+            for i in range(current_cols, num_expected_cols):
+                self._columns.append(self._new_column(i * 2))
+
         grid: List[List[tuple[Optional[str], str]]] = [
             [(None, " ") for _ in range(self.width)] for _ in range(self.height)
         ]
@@ -106,7 +113,7 @@ class Matrix:
                         style = "dark_green"
                     grid[char_y][column["x"]] = (style, char)
 
-        start_x = (self.width - self._title_width) // 2
+        start_x = (self._initial_width - self._title_width) // 2
         start_y = (self.height - self._title_height) // 2
 
         # Draw shadow
@@ -157,18 +164,6 @@ class SystemMonitor:
                 self.gpu_count = 0
         else:
             self.gpu_count = 0
-
-    def get_ascii_header(self) -> Text:
-        """Generate cool ASCII header"""
-        header = """
-███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
-██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
-███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
-╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
-███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
-╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
-        """
-        return Text(header, style="bold bright_green")
 
     def get_system_info(self) -> Panel:
         """Get basic system information"""
