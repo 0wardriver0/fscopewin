@@ -1,4 +1,4 @@
-# 🚀 System Overview - Hackerish CLI Monitor
+# 🚀 System Overview - Hackerish CLI Monitor for Windows
 
 A comprehensive real-time system monitoring tool that combines the functionality of `htop`, `nvidia-smi`, and network monitoring into one sleek, hackerish terminal dashboard.
 
@@ -21,24 +21,9 @@ Perfect for developers working on AI projects who need to monitor system resourc
 
 1. Clone or download this repository
 2. Run the setup script:
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
+   ```batch
+   ./setup.bat
    ```
-
-### Manual Setup
-
-1. Install Python dependencies:
-
-   ```bash
-   pip3 install -r requirements.txt
-   ```
-
-2. Make the script executable:
-   ```bash
-   chmod +x sysmon.py
-   ```
-
 ## 🚀 Usage
 
 ### Quick Start (Recommended)
@@ -46,7 +31,7 @@ Perfect for developers working on AI projects who need to monitor system resourc
 Use the convenience script that handles everything:
 
 ```bash
-./run.sh
+./run.bat
 ```
 
 ### Manual Method
