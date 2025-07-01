@@ -63,15 +63,8 @@ class SystemMonitor:
             self.gpu_count = 0
 
     def get_ascii_header(self) -> Text:
-        """Generate cool ASCII header"""
-        header = """
-███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
-██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
-███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
-╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
-███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
-╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
-        """
+        """Generate compact header"""
+        header = "🚀 SYSTEM OVERVIEW 🚀"
         return Text(header, style="bold green")
 
     def get_system_info(self) -> Panel:
@@ -81,17 +74,13 @@ class SystemMonitor:
             f"{int(uptime//3600):02d}:{int((uptime%3600)//60):02d}:{int(uptime%60):02d}"
         )
 
-        info_table = Table(show_header=False, box=box.SIMPLE)
+        info_table = Table(show_header=False, box=box.MINIMAL)
         info_table.add_column("Property", style="cyan")
         info_table.add_column("Value", style="bright_green")
 
-        info_table.add_row("🖥️  System", f"{platform.system()} {platform.machine()}")
-        info_table.add_row("🐍 Python", f"{platform.python_version()}")
-        info_table.add_row("⏱️  Uptime", uptime_str)
-        info_table.add_row(
-            "👤 User", psutil.users()[0].name if psutil.users() else "Unknown"
-        )
-        info_table.add_row("🕐 Time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        info_table.add_row("🖥️ System", f"{platform.system()} {platform.machine()}")
+        info_table.add_row("⏱️ Uptime", uptime_str)
+        info_table.add_row("🕐 Time", datetime.now().strftime("%H:%M:%S"))
 
         return Panel(
             info_table, title="[bold cyan]System Info[/]", border_style="green"
@@ -108,10 +97,10 @@ class SystemMonitor:
         memory = psutil.virtual_memory()
         swap = psutil.swap_memory()
 
-        table = Table(show_header=False, box=box.SIMPLE)
-        table.add_column("Metric", style="cyan")
-        table.add_column("Usage", style="bright_green")
-        table.add_column("Bar", style="yellow")
+        table = Table(show_header=False, box=box.MINIMAL)
+        table.add_column("Metric", style="cyan", width=12)
+        table.add_column("Usage", style="bright_green", width=8)
+        table.add_column("Bar", style="yellow", width=15)
 
         # CPU info
         cpu_bar = "█" * int(cpu_percent // 5) + "░" * (20 - int(cpu_percent // 5))
@@ -447,9 +436,9 @@ class SystemMonitor:
         layout = Layout()
 
         layout.split_column(
-            Layout(name="header", size=10),
+            Layout(name="header", size=1),
             Layout(name="main"),
-            Layout(name="footer", size=3),
+            Layout(name="footer", size=1),
         )
 
         layout["main"].split_row(Layout(name="left"), Layout(name="right"))
