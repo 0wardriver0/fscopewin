@@ -64,7 +64,7 @@ class SystemMonitor:
 ███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
 ╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
         """
-        return Text(header, style="bold green")
+        return Text(header, style="bold bright_green")
 
     def get_system_info(self) -> Panel:
         """Get basic system information"""
@@ -74,8 +74,8 @@ class SystemMonitor:
         )
 
         info_table = Table(show_header=False, box=box.SIMPLE)
-        info_table.add_column("Property", style="cyan")
-        info_table.add_column("Value", style="bright_green")
+        info_table.add_column("Property", style="bright_cyan")
+        info_table.add_column("Value", style="green")
 
         info_table.add_row("🖥️  System", f"{platform.system()} {platform.machine()}")
         info_table.add_row("🐍 Python", f"{platform.python_version()}")
@@ -86,7 +86,10 @@ class SystemMonitor:
         info_table.add_row("🕐 Time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         return Panel(
-            info_table, title="[bold cyan]System Info[/]", border_style="green"
+            info_table,
+            title="[bold bright_cyan]System Info[/]",
+            border_style="bright_green",
+            box=box.SQUARE,
         )
 
     def get_cpu_memory_info(self) -> Panel:
@@ -101,8 +104,8 @@ class SystemMonitor:
         swap = psutil.swap_memory()
 
         table = Table(show_header=False, box=box.SIMPLE)
-        table.add_column("Metric", style="cyan")
-        table.add_column("Usage", style="bright_green")
+        table.add_column("Metric", style="bright_cyan")
+        table.add_column("Usage", style="green")
         table.add_column("Bar", style="yellow")
 
         # CPU info
@@ -142,7 +145,12 @@ class SystemMonitor:
                 f"[{'red' if swap_percent > 50 else 'yellow' if swap_percent > 20 else 'green'}]{swap_bar}[/]",
             )
 
-        return Panel(table, title="[bold cyan]CPU & Memory[/]", border_style="green")
+        return Panel(
+            table,
+            title="[bold bright_cyan]CPU & Memory[/]",
+            border_style="bright_green",
+            box=box.SQUARE,
+        )
 
     def get_gpu_info(self) -> Panel:
         """Get GPU information using nvidia-smi"""
@@ -151,15 +159,18 @@ class SystemMonitor:
             no_gpu_table.add_column("Status", style="yellow")
             no_gpu_table.add_row("🚫 No NVIDIA GPUs detected")
             return Panel(
-                no_gpu_table, title="[bold cyan]GPU Status[/]", border_style="green"
+                no_gpu_table,
+                title="[bold bright_cyan]GPU Status[/]",
+                border_style="bright_green",
+                box=box.SQUARE,
             )
 
         table = Table(show_header=False, box=box.SIMPLE)
-        table.add_column("GPU", style="cyan", width=12)
-        table.add_column("Usage", style="bright_green", width=8)
-        table.add_column("Memory", style="bright_green", width=12)
-        table.add_column("Temp", style="bright_green", width=8)
-        table.add_column("Power", style="bright_green", width=10)
+        table.add_column("GPU", style="bright_cyan", width=12)
+        table.add_column("Usage", style="green", width=8)
+        table.add_column("Memory", style="green", width=12)
+        table.add_column("Temp", style="green", width=8)
+        table.add_column("Power", style="green", width=10)
 
         try:
             for i in range(self.gpu_count):
@@ -173,12 +184,12 @@ class SystemMonitor:
 
                 # GPU utilization
                 util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                gpu_util = util.gpu
+                gpu_util = int(util.gpu)
 
                 # Memory info
                 mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                mem_used = mem_info.used // 1024**2  # MB
-                mem_total = mem_info.total // 1024**2  # MB
+                mem_used = int(mem_info.used) // 1024**2  # MB
+                mem_total = int(mem_info.total) // 1024**2  # MB
                 mem_percent = (mem_used / mem_total) * 100
 
                 # Temperature
@@ -216,7 +227,12 @@ class SystemMonitor:
         except Exception as e:
             table.add_row("❌ Error", str(e)[:50], "", "", "")
 
-        return Panel(table, title="[bold cyan]GPU Status[/]", border_style="green")
+        return Panel(
+            table,
+            title="[bold bright_cyan]GPU Status[/]",
+            border_style="bright_green",
+            box=box.SQUARE,
+        )
 
     def get_network_info(self) -> Panel:
         """Get network traffic information"""
@@ -241,8 +257,8 @@ class SystemMonitor:
         self.network_update_time = current_time
 
         table = Table(show_header=False, box=box.SIMPLE)
-        table.add_column("Interface", style="cyan")
-        table.add_column("Value", style="bright_green")
+        table.add_column("Interface", style="bright_cyan")
+        table.add_column("Value", style="green")
 
         table.add_row("📡 Upload Speed", f"{self.bytes_to_human(upload_speed)}/s")
         table.add_row("📥 Download Speed", f"{self.bytes_to_human(download_speed)}/s")
@@ -258,7 +274,12 @@ class SystemMonitor:
         active_interfaces = [name for name, stats in interfaces.items() if stats.isup]
         table.add_row("🌐 Active Interfaces", ", ".join(active_interfaces[:3]))
 
-        return Panel(table, title="[bold cyan]Network Traffic[/]", border_style="green")
+        return Panel(
+            table,
+            title="[bold bright_cyan]Network Traffic[/]",
+            border_style="bright_green",
+            box=box.SQUARE,
+        )
 
     def get_top_processes(self) -> Panel:
         """Get top processes by CPU usage"""
@@ -275,8 +296,8 @@ class SystemMonitor:
         processes.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
 
         table = Table(show_header=True, box=box.SIMPLE)
-        table.add_column("PID", style="cyan", width=8)
-        table.add_column("Process", style="bright_green", width=20)
+        table.add_column("PID", style="bright_cyan", width=8)
+        table.add_column("Process", style="green", width=20)
         table.add_column("CPU%", style="yellow", width=8)
         table.add_column("MEM%", style="magenta", width=8)
         table.add_column("Status", style="blue", width=10)
@@ -301,14 +322,19 @@ class SystemMonitor:
                 (proc["status"] or "N/A")[:10],
             )
 
-        return Panel(table, title="[bold cyan]Top Processes[/]", border_style="green")
+        return Panel(
+            table,
+            title="[bold bright_cyan]Top Processes[/]",
+            border_style="bright_green",
+            box=box.SQUARE,
+        )
 
     def get_disk_usage(self) -> Panel:
         """Get disk usage information"""
         table = Table(show_header=False, box=box.SIMPLE)
-        table.add_column("Disk", style="cyan", width=15)
-        table.add_column("Usage", style="bright_green", width=10)
-        table.add_column("Free/Total", style="bright_green", width=15)
+        table.add_column("Disk", style="bright_cyan", width=15)
+        table.add_column("Usage", style="green", width=10)
+        table.add_column("Free/Total", style="green", width=15)
         table.add_column("Bar", style="yellow", width=20)
 
         disk_partitions = psutil.disk_partitions()
@@ -327,10 +353,15 @@ class SystemMonitor:
             except PermissionError:
                 continue
 
-        return Panel(table, title="[bold cyan]Disk Usage[/]", border_style="green")
+        return Panel(
+            table,
+            title="[bold bright_cyan]Disk Usage[/]",
+            border_style="bright_green",
+            box=box.SQUARE,
+        )
 
     @staticmethod
-    def bytes_to_human(bytes_val: int) -> str:
+    def bytes_to_human(bytes_val: float) -> str:
         """Convert bytes to human readable format"""
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_val < 1024.0:
