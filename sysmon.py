@@ -9,8 +9,6 @@ import time
 import platform
 import subprocess
 import sys
-import signal
-import threading
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -45,12 +43,6 @@ class SystemMonitor:
         self.start_time = time.time()
         self.network_stats_prev = psutil.net_io_counters()
         self.network_update_time = time.time()
-        self.selected_process = 0
-        self.top_processes = []
-        self.input_mode = "normal"  # normal, select, confirm
-        self.pending_kill_pid = None
-        self.message = ""
-        self.message_color = "white"
 
         # Initialize NVIDIA if available
         if NVIDIA_AVAILABLE:
@@ -63,8 +55,15 @@ class SystemMonitor:
             self.gpu_count = 0
 
     def get_ascii_header(self) -> Text:
-        """Generate compact header"""
-        header = "🚀 SYSTEM OVERVIEW 🚀"
+        """Generate cool ASCII header"""
+        header = """
+███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
+██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
+███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
+╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
+╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+        """
         return Text(header, style="bold green")
 
     def get_system_info(self) -> Panel:
@@ -74,13 +73,17 @@ class SystemMonitor:
             f"{int(uptime//3600):02d}:{int((uptime%3600)//60):02d}:{int(uptime%60):02d}"
         )
 
-        info_table = Table(show_header=False, box=box.MINIMAL)
+        info_table = Table(show_header=False, box=box.SIMPLE)
         info_table.add_column("Property", style="cyan")
         info_table.add_column("Value", style="bright_green")
 
-        info_table.add_row("🖥️ System", f"{platform.system()} {platform.machine()}")
-        info_table.add_row("⏱️ Uptime", uptime_str)
-        info_table.add_row("🕐 Time", datetime.now().strftime("%H:%M:%S"))
+        info_table.add_row("🖥️  System", f"{platform.system()} {platform.machine()}")
+        info_table.add_row("🐍 Python", f"{platform.python_version()}")
+        info_table.add_row("⏱️  Uptime", uptime_str)
+        info_table.add_row(
+            "👤 User", psutil.users()[0].name if psutil.users() else "Unknown"
+        )
+        info_table.add_row("🕐 Time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         return Panel(
             info_table, title="[bold cyan]System Info[/]", border_style="green"
@@ -97,10 +100,10 @@ class SystemMonitor:
         memory = psutil.virtual_memory()
         swap = psutil.swap_memory()
 
-        table = Table(show_header=False, box=box.MINIMAL)
-        table.add_column("Metric", style="cyan", width=12)
-        table.add_column("Usage", style="bright_green", width=8)
-        table.add_column("Bar", style="yellow", width=15)
+        table = Table(show_header=False, box=box.SIMPLE)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Usage", style="bright_green")
+        table.add_column("Bar", style="yellow")
 
         # CPU info
         cpu_bar = "█" * int(cpu_percent // 5) + "░" * (20 - int(cpu_percent // 5))
@@ -144,12 +147,14 @@ class SystemMonitor:
     def get_gpu_info(self) -> Panel:
         """Get GPU information using nvidia-smi"""
         if self.gpu_count == 0:
-            no_gpu_table = Table(show_header=False, box=box.MINIMAL)
+            no_gpu_table = Table(show_header=False, box=box.SIMPLE)
             no_gpu_table.add_column("Status", style="yellow")
             no_gpu_table.add_row("🚫 No NVIDIA GPUs detected")
-            return Panel(no_gpu_table, title="[bold cyan]GPU[/]", border_style="green")
+            return Panel(
+                no_gpu_table, title="[bold cyan]GPU Status[/]", border_style="green"
+            )
 
-        table = Table(show_header=False, box=box.MINIMAL)
+        table = Table(show_header=False, box=box.SIMPLE)
         table.add_column("GPU", style="cyan", width=12)
         table.add_column("Usage", style="bright_green", width=8)
         table.add_column("Memory", style="bright_green", width=12)
@@ -168,12 +173,12 @@ class SystemMonitor:
 
                 # GPU utilization
                 util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                gpu_util = int(util.gpu)
+                gpu_util = util.gpu
 
                 # Memory info
                 mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                mem_used = int(mem_info.used) // 1024**2
-                mem_total = int(mem_info.total) // 1024**2
+                mem_used = mem_info.used // 1024**2  # MB
+                mem_total = mem_info.total // 1024**2  # MB
                 mem_percent = (mem_used / mem_total) * 100
 
                 # Temperature
@@ -235,14 +240,23 @@ class SystemMonitor:
         self.network_stats_prev = current_stats
         self.network_update_time = current_time
 
-        table = Table(show_header=False, box=box.MINIMAL)
-        table.add_column("Network", style="cyan", width=12)
-        table.add_column("Value", style="bright_green", width=15)
+        table = Table(show_header=False, box=box.SIMPLE)
+        table.add_column("Interface", style="cyan")
+        table.add_column("Value", style="bright_green")
 
-        table.add_row("📡 Upload", f"{self.bytes_to_human(upload_speed)}/s")
-        table.add_row("📥 Download", f"{self.bytes_to_human(download_speed)}/s")
-        table.add_row("📤 Sent", self.bytes_to_human(current_stats.bytes_sent))
-        table.add_row("📨 Received", self.bytes_to_human(current_stats.bytes_recv))
+        table.add_row("📡 Upload Speed", f"{self.bytes_to_human(upload_speed)}/s")
+        table.add_row("📥 Download Speed", f"{self.bytes_to_human(download_speed)}/s")
+        table.add_row("📤 Total Sent", self.bytes_to_human(current_stats.bytes_sent))
+        table.add_row(
+            "📨 Total Received", self.bytes_to_human(current_stats.bytes_recv)
+        )
+        table.add_row("📊 Packets Sent", f"{current_stats.packets_sent:,}")
+        table.add_row("📊 Packets Received", f"{current_stats.packets_recv:,}")
+
+        # Get active network interfaces
+        interfaces = psutil.net_if_stats()
+        active_interfaces = [name for name, stats in interfaces.items() if stats.isup]
+        table.add_row("🌐 Active Interfaces", ", ".join(active_interfaces[:3]))
 
         return Panel(table, title="[bold cyan]Network Traffic[/]", border_style="green")
 
@@ -259,17 +273,15 @@ class SystemMonitor:
 
         # Sort by CPU usage
         processes.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
-        self.top_processes = processes[:10]  # Store for killing
 
-        table = Table(show_header=True, box=box.MINIMAL)
-        table.add_column("#", style="cyan", width=2)
-        table.add_column("PID", style="cyan", width=6)
-        table.add_column("Process", style="bright_green", width=15)
-        table.add_column("CPU%", style="yellow", width=5)
-        table.add_column("MEM%", style="magenta", width=5)
-        table.add_column("Status", style="blue", width=6)
+        table = Table(show_header=True, box=box.SIMPLE)
+        table.add_column("PID", style="cyan", width=8)
+        table.add_column("Process", style="bright_green", width=20)
+        table.add_column("CPU%", style="yellow", width=8)
+        table.add_column("MEM%", style="magenta", width=8)
+        table.add_column("Status", style="blue", width=10)
 
-        for i, proc in enumerate(self.top_processes):
+        for proc in processes[:10]:  # Top 10 processes
             cpu_color = (
                 "red"
                 if (proc["cpu_percent"] or 0) > 50
@@ -281,31 +293,15 @@ class SystemMonitor:
                 else "yellow" if (proc["memory_percent"] or 0) > 10 else "white"
             )
 
-            # Highlight selected process
-            row_style = ""
-            number_display = str(i + 1)
-            if self.input_mode == "select" and i == self.selected_process:
-                row_style = "on bright_blue"
-                number_display = f"► {i + 1}"
-
             table.add_row(
-                number_display,
                 str(proc["pid"]),
-                (proc["name"] or "N/A")[:18],
+                (proc["name"] or "N/A")[:20],
                 f"[{cpu_color}]{proc['cpu_percent'] or 0:.1f}[/]",
                 f"[{mem_color}]{proc['memory_percent'] or 0:.1f}[/]",
-                (proc["status"] or "N/A")[:8],
-                style=row_style,
+                (proc["status"] or "N/A")[:10],
             )
 
-        title_text = "[bold cyan]Top Processes"
-        if self.input_mode == "select":
-            title_text += " - Select with ↑↓, Kill with K, Esc to cancel"
-        elif self.input_mode == "normal":
-            title_text += " - Press K to kill mode"
-        title_text += "[/]"
-
-        return Panel(table, title=title_text, border_style="green")
+        return Panel(table, title="[bold cyan]Top Processes[/]", border_style="green")
 
     def get_disk_usage(self) -> Panel:
         """Get disk usage information"""
@@ -334,7 +330,7 @@ class SystemMonitor:
         return Panel(table, title="[bold cyan]Disk Usage[/]", border_style="green")
 
     @staticmethod
-    def bytes_to_human(bytes_val: float) -> str:
+    def bytes_to_human(bytes_val: int) -> str:
         """Convert bytes to human readable format"""
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if bytes_val < 1024.0:
@@ -342,92 +338,14 @@ class SystemMonitor:
             bytes_val /= 1024.0
         return f"{bytes_val:.1f}PB"
 
-    def handle_keyboard_input(self, key: str):
-        """Handle keyboard input for process interaction"""
-        if self.input_mode == "normal":
-            if key.lower() == "k":
-                self.input_mode = "select"
-                self.selected_process = 0
-                self.message = ""
-
-        elif self.input_mode == "select":
-            if key == "up" and self.selected_process > 0:
-                self.selected_process -= 1
-            elif key == "down" and self.selected_process < len(self.top_processes) - 1:
-                self.selected_process += 1
-            elif key.lower() == "k":
-                if self.top_processes and self.selected_process < len(
-                    self.top_processes
-                ):
-                    self.pending_kill_pid = self.top_processes[self.selected_process][
-                        "pid"
-                    ]
-                    self.input_mode = "confirm"
-            elif key == "escape":
-                self.input_mode = "normal"
-                self.message = "Cancelled process selection"
-                self.message_color = "yellow"
-
-        elif self.input_mode == "confirm":
-            if key.lower() == "y":
-                if self.pending_kill_pid is not None:
-                    self.kill_process(self.pending_kill_pid)
-                self.input_mode = "normal"
-                self.pending_kill_pid = None
-            elif key.lower() == "n" or key == "escape":
-                self.input_mode = "normal"
-                self.pending_kill_pid = None
-                self.message = "Kill cancelled"
-                self.message_color = "yellow"
-
-    def kill_process(self, pid: int):
-        """Kill a process by PID"""
-        try:
-            process = psutil.Process(pid)
-            process_name = process.name()
-
-            # Try graceful termination first
-            process.terminate()
-
-            # Wait a bit for graceful shutdown
-            try:
-                process.wait(timeout=2)
-                self.message = f"Successfully terminated {process_name} (PID: {pid})"
-                self.message_color = "green"
-            except psutil.TimeoutExpired:
-                # Force kill if graceful termination failed
-                process.kill()
-                self.message = f"Force killed {process_name} (PID: {pid})"
-                self.message_color = "red"
-
-        except psutil.NoSuchProcess:
-            self.message = f"Process {pid} no longer exists"
-            self.message_color = "yellow"
-        except psutil.AccessDenied:
-            self.message = f"Permission denied to kill process {pid}"
-            self.message_color = "red"
-        except Exception as e:
-            self.message = f"Error killing process {pid}: {str(e)[:30]}"
-            self.message_color = "red"
-
-    def clear_message_after_delay(self):
-        """Clear message after a delay"""
-
-        def clear():
-            time.sleep(3)
-            self.message = ""
-            self.message_color = "white"
-
-        threading.Thread(target=clear, daemon=True).start()
-
     def create_layout(self) -> Layout:
         """Create the main layout"""
         layout = Layout()
 
         layout.split_column(
-            Layout(name="header", size=1),
+            Layout(name="header", size=10),
             Layout(name="main"),
-            Layout(name="footer", size=1),
+            Layout(name="footer", size=3),
         )
 
         layout["main"].split_row(Layout(name="left"), Layout(name="right"))
@@ -456,75 +374,25 @@ class SystemMonitor:
         layout["processes"].update(self.get_top_processes())
         layout["disk"].update(self.get_disk_usage())
 
-        # Dynamic footer based on mode and messages
-        if self.input_mode == "confirm":
-            footer_text = Text(
-                f"⚠️  Kill process {self.pending_kill_pid}? (Y/N) ⚠️", style="bold red"
-            )
-        elif self.input_mode == "select":
-            footer_text = Text(
-                "🎯 Use ↑↓ arrows to select, K to kill, Esc to cancel",
-                style="bold yellow",
-            )
-        elif self.message:
-            footer_text = Text(f"💬 {self.message}", style=f"bold {self.message_color}")
-        else:
-            footer_text = Text(
-                "🚀 System Overview - Press K for kill mode, Ctrl+C to exit 🚀",
-                style="bold bright_green",
-            )
-
+        footer_text = Text(
+            "🚀 System Overview - Press Ctrl+C to exit 🚀", style="bold bright_green"
+        )
         layout["footer"].update(Align.center(footer_text))
 
     async def run(self):
-        """Main run loop with simple keyboard input"""
-        import select
-        import sys
-        import termios
-        import tty
-
+        """Main run loop"""
         layout = self.create_layout()
 
-        # Set terminal to non-blocking mode
-        old_settings = termios.tcgetattr(sys.stdin)
-        try:
-            tty.setraw(sys.stdin.fileno())
-
-            with Live(layout, refresh_per_second=2, screen=True) as live:
-                while True:
-                    try:
-                        # Check for keyboard input
-                        if select.select([sys.stdin], [], [], 0) == (
-                            [sys.stdin],
-                            [],
-                            [],
-                        ):
-                            char = sys.stdin.read(1)
-                            if char == "\x03":  # Ctrl+C
-                                break
-                            elif char == "\x1b":  # ESC sequence for arrow keys
-                                try:
-                                    char = sys.stdin.read(2)
-                                    if char == "[A":
-                                        self.handle_keyboard_input("up")
-                                    elif char == "[B":
-                                        self.handle_keyboard_input("down")
-                                    else:
-                                        self.handle_keyboard_input("escape")
-                                except:
-                                    self.handle_keyboard_input("escape")
-                            else:
-                                self.handle_keyboard_input(char)
-                                if self.message and self.message_color != "white":
-                                    self.clear_message_after_delay()
-
-                        self.update_layout(layout)
-                        await asyncio.sleep(0.1)
-                    except Exception as e:
-                        self.console.print(f"[red]Error: {e}[/red]")
-                        await asyncio.sleep(1)
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        with Live(layout, refresh_per_second=2, screen=True) as live:
+            while True:
+                try:
+                    self.update_layout(layout)
+                    await asyncio.sleep(1)
+                except KeyboardInterrupt:
+                    break
+                except Exception as e:
+                    self.console.print(f"[red]Error: {e}[/red]")
+                    await asyncio.sleep(1)
 
 
 def main():
