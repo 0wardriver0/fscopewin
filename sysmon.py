@@ -46,8 +46,20 @@ class Matrix:
         self.width = width
         self.height = height
         self._columns = [self._new_column(i) for i in range(self.width) if i % 2 == 0]
-        self._title_text = "SYSTEM OVERVIEW"
-        self._title_len = len(self._title_text)
+        self._title_text = self._get_title_text()
+        self._title_lines = self._title_text.strip().split("\n")
+        self._title_width = max(len(line) for line in self._title_lines)
+        self._title_height = len(self._title_lines)
+
+    def _get_title_text(self) -> str:
+        return """
+███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
+██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
+███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
+╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
+╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+"""
 
     def _random_char(self) -> str:
         return chr(random.choice(list(range(0x30A0, 0x30FF)) + list(range(48, 58))))
@@ -94,10 +106,13 @@ class Matrix:
                         style = "dark_green"
                     grid[char_y][column["x"]] = (style, char)
 
-        start_x = (self.width - self._title_len) // 2
-        start_y = self.height // 2
-        for i, char in enumerate(self._title_text):
-            grid[start_y][start_x + i] = ("bold bright_white on green", char)
+        start_x = (self.width - self._title_width) // 2
+        start_y = (self.height - self._title_height) // 2
+        for r, line in enumerate(self._title_lines):
+            for c, char in enumerate(line):
+                if 0 <= start_y + r < self.height and 0 <= start_x + c < self.width:
+                    if char != " ":
+                        grid[start_y + r][start_x + c] = ("bold bright_green", char)
 
         for row in grid:
             for style, char in row:
@@ -487,11 +502,11 @@ class SystemMonitor:
         """Main run loop"""
         layout = self.create_layout()
 
-        with Live(layout, refresh_per_second=2, screen=True) as live:
+        with Live(layout, refresh_per_second=10, screen=True) as live:
             while True:
                 try:
                     self.update_layout(layout)
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)
                 except KeyboardInterrupt:
                     break
                 except Exception as e:
