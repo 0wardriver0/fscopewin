@@ -9,7 +9,7 @@ Perfect for developers working on AI projects who need to monitor system resourc
 - **🔥 CPU & Memory Monitoring**: Real-time CPU usage, memory consumption, and swap usage with visual bars
 - **🎮 GPU Monitoring**: NVIDIA GPU utilization, memory usage, temperature, and power consumption
 - **📡 Network Traffic**: Upload/download speeds, total data transferred, and active interfaces
-- **📊 Process Monitoring**: Top 10 processes by CPU usage (like htop)
+- **📊 Interactive Process Monitoring**: Top 10 processes by CPU usage with ability to kill processes
 - **💽 Disk Usage**: Storage usage across all mounted drives
 - **🖥️ System Information**: OS details, uptime, current user, and timestamp
 - **🎨 Hackerish UI**: Matrix-style green color scheme with ASCII art header
@@ -76,6 +76,15 @@ Use the convenience script that handles everything:
 
 **Press `Ctrl+C` to exit the monitor**
 
+### 🎮 Keyboard Controls
+
+- **`K`** - Enter process kill mode
+- **`↑/↓`** - Navigate through processes (when in kill mode)
+- **`K`** - Kill selected process (when in kill mode)
+- **`Y`** - Confirm process kill
+- **`N`** or **`Esc`** - Cancel process kill/exit kill mode
+- **`Ctrl+C`** - Exit the application
+
 ## 📋 Requirements
 
 - **Python 3.7+**
@@ -120,6 +129,11 @@ Use the convenience script that handles everything:
 - Process ID, name, and status
 - CPU and memory usage per process
 - Color-coded resource usage
+- **Interactive process killing**:
+  - Press `K` to enter kill mode
+  - Use ↑↓ arrow keys to select process
+  - Press `K` again to kill selected process
+  - Press `Y` to confirm or `N`/`Esc` to cancel
 
 ### Disk Usage Panel
 
