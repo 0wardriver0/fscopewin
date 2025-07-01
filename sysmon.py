@@ -10,7 +10,7 @@ import platform
 import subprocess
 import sys
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 import random
 
 import psutil
@@ -47,7 +47,6 @@ class SystemMonitor:
         self.network_update_time = time.time()
 
         self.matrix_chars = "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン"
-        self.matrix_width = 15
 
         # Initialize NVIDIA if available
         if NVIDIA_AVAILABLE:
@@ -73,7 +72,7 @@ class SystemMonitor:
             text.append("\n")
         return text
 
-    def get_ascii_header(self) -> Columns:
+    def get_ascii_header(self) -> Union[Columns, Align]:
         """Generate cool ASCII header with matrix effect"""
         header_art = """
 ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
@@ -84,13 +83,24 @@ class SystemMonitor:
 ╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
         """.strip()
 
-        header_text = Text(header_art, style="bold bright_green", justify="center")
-        num_lines = header_art.count("\n") + 1
+        header_text = Text(header_art, style="bold bright_green")
+        header_art_lines = header_art.split("\n")
+        header_art_width = (
+            max(len(line) for line in header_art_lines) if header_art_lines else 0
+        )
+        num_lines = len(header_art_lines)
 
-        left_matrix = self._generate_matrix_column(self.matrix_width, num_lines)
-        right_matrix = self._generate_matrix_column(self.matrix_width, num_lines)
+        matrix_width = (self.console.width - header_art_width) // 2 - 2
 
-        return Columns([left_matrix, header_text, right_matrix])
+        if matrix_width > 4:
+            left_matrix = self._generate_matrix_column(matrix_width, num_lines)
+            right_matrix = self._generate_matrix_column(matrix_width, num_lines)
+            return Columns(
+                [left_matrix, Align.center(header_text), right_matrix],
+                expand=True,
+            )
+
+        return Align.center(header_text)
 
     def get_system_info(self) -> Panel:
         """Get basic system information"""
@@ -405,19 +415,29 @@ class SystemMonitor:
             Layout(name="footer", size=3),
         )
 
-        layout["main"].split_row(Layout(name="left"), Layout(name="right"))
-
-        layout["left"].split_column(
-            Layout(name="system_info", ratio=1),
-            Layout(name="cpu_mem", ratio=1),
-            Layout(name="gpu", ratio=1),
-        )
-
-        layout["right"].split_column(
-            Layout(name="network", ratio=1),
-            Layout(name="processes", ratio=2),
-            Layout(name="disk", ratio=1),
-        )
+        if self.console.width < 130:
+            # Narrow layout
+            layout["main"].split_column(
+                Layout(name="system_info"),
+                Layout(name="cpu_mem"),
+                Layout(name="network"),
+                Layout(name="gpu"),
+                Layout(name="processes"),
+                Layout(name="disk"),
+            )
+        else:
+            # Wide layout
+            layout["main"].split_row(Layout(name="left"), Layout(name="right"))
+            layout["left"].split_column(
+                Layout(name="system_info", ratio=1),
+                Layout(name="cpu_mem", ratio=1),
+                Layout(name="gpu", ratio=1),
+            )
+            layout["right"].split_column(
+                Layout(name="network", ratio=1),
+                Layout(name="processes", ratio=2),
+                Layout(name="disk", ratio=1),
+            )
 
         return layout
 
@@ -439,10 +459,16 @@ class SystemMonitor:
     async def run(self):
         """Main run loop"""
         layout = self.create_layout()
+        last_width = self.console.width
 
         with Live(layout, refresh_per_second=10, screen=True) as live:
             while True:
                 try:
+                    if self.console.width != last_width:
+                        layout = self.create_layout()
+                        live.update(layout, refresh=True)
+                        last_width = self.console.width
+
                     self.update_layout(layout)
                     await asyncio.sleep(0.1)
                 except KeyboardInterrupt:
