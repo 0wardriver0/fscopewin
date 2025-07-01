@@ -144,14 +144,12 @@ class SystemMonitor:
     def get_gpu_info(self) -> Panel:
         """Get GPU information using nvidia-smi"""
         if self.gpu_count == 0:
-            no_gpu_table = Table(show_header=False, box=box.SIMPLE)
+            no_gpu_table = Table(show_header=False, box=box.MINIMAL)
             no_gpu_table.add_column("Status", style="yellow")
             no_gpu_table.add_row("🚫 No NVIDIA GPUs detected")
-            return Panel(
-                no_gpu_table, title="[bold cyan]GPU Status[/]", border_style="green"
-            )
+            return Panel(no_gpu_table, title="[bold cyan]GPU[/]", border_style="green")
 
-        table = Table(show_header=False, box=box.SIMPLE)
+        table = Table(show_header=False, box=box.MINIMAL)
         table.add_column("GPU", style="cyan", width=12)
         table.add_column("Usage", style="bright_green", width=8)
         table.add_column("Memory", style="bright_green", width=12)
@@ -237,23 +235,14 @@ class SystemMonitor:
         self.network_stats_prev = current_stats
         self.network_update_time = current_time
 
-        table = Table(show_header=False, box=box.SIMPLE)
-        table.add_column("Interface", style="cyan")
-        table.add_column("Value", style="bright_green")
+        table = Table(show_header=False, box=box.MINIMAL)
+        table.add_column("Network", style="cyan", width=12)
+        table.add_column("Value", style="bright_green", width=15)
 
-        table.add_row("📡 Upload Speed", f"{self.bytes_to_human(upload_speed)}/s")
-        table.add_row("📥 Download Speed", f"{self.bytes_to_human(download_speed)}/s")
-        table.add_row("📤 Total Sent", self.bytes_to_human(current_stats.bytes_sent))
-        table.add_row(
-            "📨 Total Received", self.bytes_to_human(current_stats.bytes_recv)
-        )
-        table.add_row("📊 Packets Sent", f"{current_stats.packets_sent:,}")
-        table.add_row("📊 Packets Received", f"{current_stats.packets_recv:,}")
-
-        # Get active network interfaces
-        interfaces = psutil.net_if_stats()
-        active_interfaces = [name for name, stats in interfaces.items() if stats.isup]
-        table.add_row("🌐 Active Interfaces", ", ".join(active_interfaces[:3]))
+        table.add_row("📡 Upload", f"{self.bytes_to_human(upload_speed)}/s")
+        table.add_row("📥 Download", f"{self.bytes_to_human(download_speed)}/s")
+        table.add_row("📤 Sent", self.bytes_to_human(current_stats.bytes_sent))
+        table.add_row("📨 Received", self.bytes_to_human(current_stats.bytes_recv))
 
         return Panel(table, title="[bold cyan]Network Traffic[/]", border_style="green")
 
@@ -272,13 +261,13 @@ class SystemMonitor:
         processes.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
         self.top_processes = processes[:10]  # Store for killing
 
-        table = Table(show_header=True, box=box.SIMPLE)
-        table.add_column("#", style="cyan", width=3)
-        table.add_column("PID", style="cyan", width=8)
-        table.add_column("Process", style="bright_green", width=18)
-        table.add_column("CPU%", style="yellow", width=8)
-        table.add_column("MEM%", style="magenta", width=8)
-        table.add_column("Status", style="blue", width=8)
+        table = Table(show_header=True, box=box.MINIMAL)
+        table.add_column("#", style="cyan", width=2)
+        table.add_column("PID", style="cyan", width=6)
+        table.add_column("Process", style="bright_green", width=15)
+        table.add_column("CPU%", style="yellow", width=5)
+        table.add_column("MEM%", style="magenta", width=5)
+        table.add_column("Status", style="blue", width=6)
 
         for i, proc in enumerate(self.top_processes):
             cpu_color = (
