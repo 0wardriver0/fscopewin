@@ -108,12 +108,26 @@ class Matrix:
 
         start_x = (self.width - self._title_width) // 2
         start_y = (self.height - self._title_height) // 2
+
+        # Draw shadow
+        for r, line in enumerate(self._title_lines):
+            for c, char in enumerate(line):
+                if char != " ":
+                    shadow_x, shadow_y = start_x + c + 1, start_y + r + 1
+                    if (
+                        0 <= shadow_y < self.height
+                        and 0 <= shadow_x < self.width
+                        and grid[shadow_y][shadow_x][0] is None
+                    ):
+                        grid[shadow_y][shadow_x] = ("green", char)
+
+        # Draw main text
         for r, line in enumerate(self._title_lines):
             for c, char in enumerate(line):
                 if 0 <= start_y + r < self.height and 0 <= start_x + c < self.width:
                     if char != " ":
                         grid[start_y + r][start_x + c] = (
-                            "bold bright_green on black",
+                            "bold bright_green",
                             char,
                         )
 
