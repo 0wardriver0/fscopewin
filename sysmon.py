@@ -11,10 +11,9 @@ import subprocess
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional
-import random
 
 import psutil
-from rich.console import Console, ConsoleOptions, RenderResult
+from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
@@ -29,7 +28,6 @@ from rich.text import Text
 from rich.live import Live
 from rich.align import Align
 from rich import box
-from rich.segment import Segment
 
 try:
     import pynvml
@@ -39,121 +37,12 @@ except ImportError:
     NVIDIA_AVAILABLE = False
 
 
-class Matrix:
-    """A renderable for a Matrix-like effect."""
-
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
-        self._initial_width = width
-        self._columns = [self._new_column(i) for i in range(self.width) if i % 2 == 0]
-        self._title_text = self._get_title_text()
-        self._title_lines = self._title_text.strip().split("\n")
-        self._title_width = max(len(line) for line in self._title_lines)
-        self._title_height = len(self._title_lines)
-
-    def _get_title_text(self) -> str:
-        return """
-███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
-██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
-███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
-╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
-███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
-╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
-"""
-
-    def _random_char(self) -> str:
-        return chr(random.choice(list(range(0x30A0, 0x30FF)) + list(range(48, 58))))
-
-    def _new_column(self, x: int):
-        return {
-            "x": x,
-            "y": random.randint(-self.height, 0),
-            "length": random.randint(int(self.height * 0.3), self.height),
-            "speed": random.uniform(0.1, 0.4),
-            "chars": [self._random_char() for _ in range(self.height * 2)],
-            "update_y": 0.0,
-        }
-
-    def __rich_console__(
-        self, console: Console, options: ConsoleOptions
-    ) -> RenderResult:
-        num_expected_cols = self.width // 2
-        if len(self._columns) < num_expected_cols:
-            current_cols = len(self._columns)
-            for i in range(current_cols, num_expected_cols):
-                self._columns.append(self._new_column(i * 2))
-
-        grid: List[List[tuple[Optional[str], str]]] = [
-            [(None, " ") for _ in range(self.width)] for _ in range(self.height)
-        ]
-
-        for column in self._columns:
-            column["update_y"] += column["speed"]
-            if column["update_y"] >= 1:
-                column["y"] += int(column["update_y"])
-                column["update_y"] = column["update_y"] % 1
-
-            if column["y"] - column["length"] > self.height:
-                new_col = self._new_column(column["x"])
-                column.update(new_col)
-
-            for i in range(column["length"]):
-                char_y = column["y"] - i
-                if 0 <= char_y < self.height:
-                    char = column["chars"][i % len(column["chars"])]
-                    style = "black"
-                    if i == 0:
-                        style = "bold bright_green"
-                    elif i < 3:
-                        style = "bold green"
-                    elif i < 6:
-                        style = "green"
-                    else:
-                        style = "dark_green"
-                    grid[char_y][column["x"]] = (style, char)
-
-        start_x = (self._initial_width - self._title_width) // 2
-        start_y = (self.height - self._title_height) // 2
-
-        # Draw shadow
-        for r, line in enumerate(self._title_lines):
-            for c, char in enumerate(line):
-                if char != " ":
-                    shadow_x, shadow_y = start_x + c + 1, start_y + r + 1
-                    if (
-                        0 <= shadow_y < self.height
-                        and 0 <= shadow_x < self.width
-                        and grid[shadow_y][shadow_x][0] is None
-                    ):
-                        grid[shadow_y][shadow_x] = ("green", char)
-
-        # Draw main text
-        for r, line in enumerate(self._title_lines):
-            for c, char in enumerate(line):
-                if 0 <= start_y + r < self.height and 0 <= start_x + c < self.width:
-                    if char != " ":
-                        grid[start_y + r][start_x + c] = (
-                            "bold bright_green",
-                            char,
-                        )
-
-        for row in grid:
-            for style, char in row:
-                if style:
-                    yield Segment(char, console.get_style(style))
-                else:
-                    yield Segment(char)
-            yield Segment.line()
-
-
 class SystemMonitor:
     def __init__(self):
         self.console = Console()
         self.start_time = time.time()
         self.network_stats_prev = psutil.net_io_counters()
         self.network_update_time = time.time()
-        self.matrix = Matrix(self.console.width, 10)
 
         # Initialize NVIDIA if available
         if NVIDIA_AVAILABLE:
@@ -164,6 +53,18 @@ class SystemMonitor:
                 self.gpu_count = 0
         else:
             self.gpu_count = 0
+
+    def get_ascii_header(self) -> Text:
+        """Generate cool ASCII header"""
+        header = """
+███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
+██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
+███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
+╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
+███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
+╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
+        """
+        return Text(header, style="bold bright_green")
 
     def get_system_info(self) -> Panel:
         """Get basic system information"""
@@ -496,8 +397,7 @@ class SystemMonitor:
 
     def update_layout(self, layout: Layout):
         """Update all panels in the layout"""
-        self.matrix.width = self.console.width
-        layout["header"].update(self.matrix)
+        layout["header"].update(Align.center(self.get_ascii_header()))
         layout["system_info"].update(self.get_system_info())
         layout["cpu_mem"].update(self.get_cpu_memory_info())
         layout["gpu"].update(self.get_gpu_info())
@@ -514,11 +414,11 @@ class SystemMonitor:
         """Main run loop"""
         layout = self.create_layout()
 
-        with Live(layout, refresh_per_second=10, screen=True) as live:
+        with Live(layout, refresh_per_second=2, screen=True) as live:
             while True:
                 try:
                     self.update_layout(layout)
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(1)
                 except KeyboardInterrupt:
                     break
                 except Exception as e:
