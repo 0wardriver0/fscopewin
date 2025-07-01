@@ -11,6 +11,7 @@ import subprocess
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional
+import random
 
 import psutil
 from rich.console import Console
@@ -28,6 +29,7 @@ from rich.text import Text
 from rich.live import Live
 from rich.align import Align
 from rich import box
+from rich.columns import Columns
 
 try:
     import pynvml
@@ -44,6 +46,9 @@ class SystemMonitor:
         self.network_stats_prev = psutil.net_io_counters()
         self.network_update_time = time.time()
 
+        self.matrix_chars = "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン"
+        self.matrix_width = 15
+
         # Initialize NVIDIA if available
         if NVIDIA_AVAILABLE:
             try:
@@ -54,17 +59,38 @@ class SystemMonitor:
         else:
             self.gpu_count = 0
 
-    def get_ascii_header(self) -> Text:
-        """Generate cool ASCII header"""
-        header = """
+    def _generate_matrix_column(self, width: int, height: int) -> Text:
+        """Generates a column of matrix-style text."""
+        text = Text()
+        for _ in range(height):
+            for _ in range(width):
+                char = random.choice(self.matrix_chars)
+                if random.random() < 0.2:
+                    text.append(" ")
+                else:
+                    style = random.choice(["green", "bright_green", "color(22)"])
+                    text.append(char, style=style)
+            text.append("\n")
+        return text
+
+    def get_ascii_header(self) -> Columns:
+        """Generate cool ASCII header with matrix effect"""
+        header_art = """
 ███████╗██╗   ██╗███████╗████████╗███████╗███╗   ███╗     ██████╗ ██╗   ██╗███████╗██████╗ ██╗   ██╗██╗███████╗██╗    ██╗
 ██╔════╝╚██╗ ██╔╝██╔════╝╚══██╔══╝██╔════╝████╗ ████║    ██╔═══██╗██║   ██║██╔════╝██╔══██╗██║   ██║██║██╔════╝██║    ██║
 ███████╗ ╚████╔╝ ███████╗   ██║   █████╗  ██╔████╔██║    ██║   ██║██║   ██║█████╗  ██████╔╝██║   ██║██║█████╗  ██║ █╗ ██║
 ╚════██║  ╚██╔╝  ╚════██║   ██║   ██╔══╝  ██║╚██╔╝██║    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚██╗ ██╔╝██║██╔══╝  ██║███╗██║
 ███████║   ██║   ███████║   ██║   ███████╗██║ ╚═╝ ██║    ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ╚████╔╝ ██║███████╗╚███╔███╔╝
 ╚══════╝   ╚═╝   ╚══════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝     ╚═════╝   ╚═══╝  ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝ ╚══╝╚══╝
-        """
-        return Text(header, style="bold bright_green")
+        """.strip()
+
+        header_text = Text(header_art, style="bold bright_green", justify="center")
+        num_lines = header_art.count("\n") + 1
+
+        left_matrix = self._generate_matrix_column(self.matrix_width, num_lines)
+        right_matrix = self._generate_matrix_column(self.matrix_width, num_lines)
+
+        return Columns([left_matrix, header_text, right_matrix])
 
     def get_system_info(self) -> Panel:
         """Get basic system information"""
@@ -397,7 +423,7 @@ class SystemMonitor:
 
     def update_layout(self, layout: Layout):
         """Update all panels in the layout"""
-        layout["header"].update(Align.center(self.get_ascii_header()))
+        layout["header"].update(self.get_ascii_header())
         layout["system_info"].update(self.get_system_info())
         layout["cpu_mem"].update(self.get_cpu_memory_info())
         layout["gpu"].update(self.get_gpu_info())
@@ -414,11 +440,11 @@ class SystemMonitor:
         """Main run loop"""
         layout = self.create_layout()
 
-        with Live(layout, refresh_per_second=2, screen=True) as live:
+        with Live(layout, refresh_per_second=10, screen=True) as live:
             while True:
                 try:
                     self.update_layout(layout)
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)
                 except KeyboardInterrupt:
                     break
                 except Exception as e:
