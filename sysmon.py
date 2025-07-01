@@ -164,7 +164,12 @@ class SystemMonitor:
         try:
             for i in range(self.gpu_count):
                 handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-                name = pynvml.nvmlDeviceGetName(handle).decode()
+                # Handle both string and bytes return types for GPU name
+                name_raw = pynvml.nvmlDeviceGetName(handle)
+                if isinstance(name_raw, bytes):
+                    name = name_raw.decode()
+                else:
+                    name = str(name_raw)
 
                 # GPU utilization
                 util = pynvml.nvmlDeviceGetUtilizationRates(handle)
