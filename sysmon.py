@@ -488,7 +488,7 @@ class SystemMonitor:
     def update_layout(self, layout: Layout):
         """Update all panels in the layout"""
         self.matrix.width = self.console.width
-        layout["header"].update(Align.center(self.matrix))
+        layout["header"].update(self.matrix)
         layout["system_info"].update(self.get_system_info())
         layout["cpu_mem"].update(self.get_cpu_memory_info())
         layout["gpu"].update(self.get_gpu_info())
