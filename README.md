@@ -17,48 +17,27 @@ Perfect for developers working on AI projects who need to monitor system resourc
 
 ## 🛠️ Installation
 
-### Quick Setup
+### 🚀 Quick Setup
 
 1. Clone or download this repository
 2. Run the setup script:
    ```batch
    ./setup.bat
    ```
-## 🚀 Usage
-
-### Quick Start (Recommended)
-
-Use the convenience script that handles everything:
-
-```bash
-./run.bat
-```
-
-### Manual Method
-
-1. Activate the virtual environment:
-
-   ```bash
-   source venv/bin/activate
+3. ```bash
+   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned 
    ```
-
-2. Run the system monitor:
-
-   ```bash
-   ./sysmon.py
+4. ```bash
+   venv\Scripts\Activate.ps1
    ```
-
-   or
-
-   ```bash
-   python3 sysmon.py
+5. ```bash
+   pip  install -r requirements.txt
    ```
+6. ```python
+   python sysmon.py
+   ```   
 
-3. Deactivate when done:
-   ```bash
-   deactivate
-   ```
-
+ 
 **Press `Ctrl+C` to exit the monitor**
 
 ### 🎮 Keyboard Controls
