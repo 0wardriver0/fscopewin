@@ -24,20 +24,6 @@ Perfect for developers working on AI projects who need to monitor system resourc
    ```batch
    ./setup.bat
    ```
-3. ```bash
-   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned 
-   ```
-4. ```bash
-   venv\Scripts\Activate.ps1
-   ```
-5. ```bash
-   pip  install -r requirements.txt
-   ```
-6. ```python
-   python sysmon.py
-   ```   
-
- 
 **Press `Ctrl+C` to exit the monitor**
 
 ### 🎮 Keyboard Controls
